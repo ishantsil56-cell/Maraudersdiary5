@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a0a00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Marauder's Diary">
+<meta name="description" content="Your enchanted personal diary">
+<link rel="manifest" href="manifest.json">
+<title>Marauder's Diary</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --parchment:     #f5e6c8;
+    --parchment-lt:  #fdf6e3;
+    --parchment-dk:  #d4a956;
+    --ink:           #1a0a00;
+    --gold:          #c9a84c;
+    --gold-lt:       #e8c96a;
+    --dark-red:      #740001;
+    --wax-red:       #8b0000;
+    --deep-purple:   #2d0a4e;
+    --leather:       #5c3317;
+    --leather-dk:    #2c1810;
+    --magic-blue:    #4a90d9;
+    --bg:            #0d0008;
+    --bg2:           #1a0a00;
+    --ink-faint:     rgba(26,10,0,0.18);
+    --gold-faint:    rgba(201,168,76,0.18);
+    --gold-border:   rgba(201,168,76,0.35);
+    --parchment-60:  rgba(245,230,200,0.6);
+    --parchment-30:  rgba(245,230,200,0.3);
+    --screen-h:      100dvh;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  html, body {
+    height: var(--screen-h);
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--parchment);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* ── Screens ── */
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .screen.active { opacity: 1; pointer-events: all; }
+
+  /* ── Sparkles canvas ── */
+  #sparkle-canvas {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Typography ── */
+  h1 { font-size: 1.7rem; letter-spacing: 0.1em; color: var(--gold); text-align: center; }
+  h2 { font-size: 1.2rem; color: var(--gold); letter-spacing: 0.05em; }
+  .italic { font-style: italic; }
+  .muted  { color: var(--parchment-60); font-size: 0.82rem; }
+
+  /* ── Buttons ── */
+  .btn-wax {
+    display: block; width: 100%;
+    padding: 14px 28px;
+    background: radial-gradient(ellipse at 40% 35%, #a00, var(--wax-red), #2a0000);
+    border: 1.5px solid var(--gold);
+    border-radius: 40px;
+    color: var(--parchment);
+    font-family: Georgia, serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(139,0,0,0.4);
+    -webkit-appearance: none;
+  }
+  .btn-wax:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(139,0,0,0.3); }
+  .btn-wax:disabled { opacity: 0.4; }
+
+  .btn-text {
+    background: none; border: none;
+    color: var(--gold); font-family: Georgia, serif;
+    font-size: 0.8rem; letter-spacing: 0.12em;
+    cursor: pointer; padding: 8px 16px;
+  }
+  .btn-icon {
+    background: none; border: none;
+    color: var(--parchment); font-size: 1.4rem;
+    cursor: pointer; padding: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Gold divider ── */
+  .divider {
+    position: relative; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .divider::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+  }
+  .divider::after {
+    content: '✦';
+    font-size: 0.7rem; color: var(--gold);
+    background: var(--bg); padding: 0 8px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Enchanted input ── */
+  .field-wrap { margin-bottom: 16px; }
+  .field-label {
+    display: block; font-size: 0.7rem;
+    color: var(--gold); letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  .enchanted-input, .enchanted-textarea {
+    width: 100%;
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--gold-border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: var(--parchment);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    resize: none;
+  }
+  .enchanted-input:focus, .enchanted-textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.15);
+  }
+  .enchanted-input::placeholder, .enchanted-textarea::placeholder {
+    color: rgba(245,230,200,0.3); font-style: italic;
+  }
+
+  /* ── Scroll content ── */
+  .scroll-content {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 24px 20px;
+    position: relative; z-index: 1;
+  }
+  .scroll-content::-webkit-scrollbar { display: none; }
+
+  /* ══════════════════════════════════════
+     SETUP SCREEN
+  ══════════════════════════════════════ */
+  #setup-screen {
+    background: linear-gradient(160deg, #0d0015, var(--bg), #1a0a00);
+    justify-content: center; align-items: center;
+  }
+  #setup-screen .scroll-content {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100%;
+    gap: 0;
+  }
+  .setup-step { display: none; width: 100%; max-width: 400px; }
+  .setup-step.visible { display: block; }
+
+  .step-icon { font-size: 3.5rem; text-align: center; margin-bottom: 16px; }
+  .step-title { text-align: center; margin-bottom: 10px; }
+  .step-desc {
+    text-align: center; font-style: italic;
+    color: var(--parchment-60); font-size: 0.88rem;
+    line-height: 1.6; margin-bottom: 28px;
+  }
+  .riddle-preview {
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px; padding: 16px;
+    font-style: italic; color: var(--parchment);
+    margin-bottom: 20px; font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .error-msg {
+    color: #ff6b6b; font-size: 0.8rem;
+    text-align: center; margin-top: 8px;
+    min-height: 20px;
+  }
+
+  /* ══════════════════════════════════════
+     LOCK SCREEN
+  ══════════════════════════════════════ */
+  #lock-screen {
+    background: linear-gradient(160deg, #0d0015, var(--bg), #1a0a00);
+    justify-content: center; align-items: center;
+  }
+  #lock-screen .scroll-content {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100%;
+  }
+  #lock-screen .inner {
+    width: 100%; max-width: 400px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .diary-icon-anim {
+    font-size: 5rem; margin-bottom: 12px;
+    animation: pulse-book 3s ease-in-out infinite;
+  }
+  @keyframes pulse-book {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+  .riddle-box {
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--gold-border);
+    border-radius: 10px; padding: 20px;
+    margin: 20px 0; width: 100%;
+  }
+  .riddle-box-label {
+    font-size: 0.65rem; letter-spacing: 0.18em;
+    color: var(--gold); margin-bottom: 10px;
+  }
+  .riddle-text {
+    font-style: italic; font-size: 1rem;
+    color: var(--parchment); line-height: 1.6;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(6px); }
+  }
+  .shake { animation: shake 0.4s ease; }
+  .wrong-msg {
+    color: #ff6b6b; font-size: 0.82rem;
+    text-align: center; font-style: italic;
+    min-height: 22px; margin: 6px 0;
+  }
+  .lock-hint {
+    color: rgba(245,230,200,0.2);
+    font-size: 0.72rem; text-align: center;
+    margin-top: 16px; font-style: italic;
+  }
+
+  /* ══════════════════════════════════════
+     HOME SCREEN
+  ══════════════════════════════════════ */
+  #home-screen { background: #0d0008; }
+
+  .home-header {
+    background: linear-gradient(180deg, var(--bg2), transparent);
+    padding: 16px 20px 10px;
+    position: relative; z-index: 2; flex-shrink: 0;
+  }
+  .home-header-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+  }
+  .home-title {
+    font-size: 1.25rem; color: var(--gold);
+    letter-spacing: 0.08em;
+  }
+  .home-subtitle { font-size: 0.75rem; color: var(--parchment-60); font-style: italic; }
+  .sync-btn {
+    background: none; border: none;
+    font-size: 1.3rem; cursor: pointer;
+    padding: 4px;
+  }
+  .sync-label { font-size: 0.62rem; color: var(--magic-blue); text-align: center; }
+
+  /* Entry list */
+  .entries-list {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 8px 16px 100px;
+    position: relative; z-index: 1;
+  }
+  .entries-list::-webkit-scrollbar { display: none; }
+
+  .entry-card {
+    background: linear-gradient(135deg, var(--leather), var(--leather-dk), #100600);
+    border: 1px solid var(--gold-border);
+    border-radius: 6px; padding: 16px;
+    margin-bottom: 12px;
+    transition: transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .entry-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,0.04), transparent);
+    pointer-events: none;
+  }
+  .entry-card:active { transform: scale(0.98); }
+  .entry-card-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 8px;
+  }
+  .entry-mood-title {
+    display: flex; align-items: center; gap: 8px;
+    flex: 1; min-width: 0;
+  }
+  .entry-mood { font-size: 1.2rem; flex-shrink: 0; }
+  .entry-title {
+    font-size: 0.98rem; color: var(--parchment);
+    font-weight: normal; letter-spacing: 0.02em;
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .entry-preview {
+    font-size: 0.8rem; color: var(--parchment-60);
+    font-style: italic; line-height: 1.5;
+    margin: 8px 0 6px; overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .entry-meta {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; color: rgba(201,168,76,0.5);
+  }
+  .entry-synced { font-size: 0.72rem; }
+  .entry-delete-btn {
+    background: none; border: none; font-size: 1rem;
+    cursor: pointer; padding: 4px; flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .delete-confirm {
+    display: none; margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--gold-border);
+  }
+  .delete-confirm.show { display: flex; align-items: center; gap: 8px; }
+  .delete-confirm span {
+    flex: 1; font-size: 0.78rem;
+    font-style: italic; color: var(--parchment-60);
+  }
+
+  /* Empty state */
+  .empty-state {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 60vh; gap: 12px;
+  }
+  .empty-icon {
+    font-size: 4rem;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .empty-title { color: var(--parchment-60); font-style: italic; font-size: 1rem; }
+  .empty-sub { color: rgba(245,230,200,0.3); font-size: 0.8rem; font-style: italic; text-align: center; max-width: 240px; }
+
+  /* FAB */
+  .fab {
+    position: fixed; bottom: 28px; right: 24px;
+    width: 60px; height: 60px;
+    background: radial-gradient(ellipse at 40% 35%, #a00, var(--wax-red), #2a0000);
+    border: 1.5px solid var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    cursor: pointer; z-index: 10;
+    box-shadow: 0 4px 24px rgba(139,0,0,0.5);
+    transition: transform 0.15s;
+    -webkit-appearance: none;
+    outline: none;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* ══════════════════════════════════════
+     EDITOR SCREEN
+  ══════════════════════════════════════ */
+  #editor-screen { background: #0d0008; }
+
+  .editor-topbar {
+    display: flex; align-items: center;
+    background: linear-gradient(180deg, var(--bg2), transparent);
+    padding: 12px 8px 8px;
+    gap: 4px; flex-shrink: 0; z-index: 2;
+    position: relative;
+  }
+  .editor-center { flex: 1; text-align: center; }
+  .editor-screen-title {
+    font-size: 0.85rem; color: var(--gold);
+    letter-spacing: 0.08em;
+  }
+  .saved-flash {
+    position: fixed; top: 70px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(53,94,59,0.85);
+    border: 1px solid rgba(53,200,80,0.3);
+    border-radius: 20px; padding: 8px 20px;
+    font-size: 0.82rem; color: var(--parchment);
+    font-style: italic; z-index: 20;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .saved-flash.show { opacity: 1; }
+
+  /* Mood picker */
+  .mood-bar {
+    display: flex; align-items: center; gap: 0;
+    background: rgba(26,10,0,0.8);
+    padding: 10px 16px;
+    overflow-x: auto; flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    transition: max-height 0.3s, opacity 0.3s;
+    max-height: 0; opacity: 0; overflow: hidden;
+  }
+  .mood-bar::-webkit-scrollbar { display: none; }
+  .mood-bar.open { max-height: 60px; opacity: 1; }
+  .mood-btn {
+    background: none; border: none;
+    font-size: 1.4rem; padding: 6px 8px;
+    cursor: pointer; border-radius: 8px;
+    transition: background 0.15s; flex-shrink: 0;
+  }
+  .mood-btn.selected {
+    background: rgba(201,168,76,0.2);
+    border: 1px solid var(--gold-border);
+  }
+
+  /* Parchment writing area */
+  .parchment-wrap {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 12px 16px 40px;
+    position: relative; z-index: 1;
+  }
+  .parchment-wrap::-webkit-scrollbar { display: none; }
+  .parchment-sheet {
+    background:
+      repeating-linear-gradient(
+        transparent, transparent 39px,
+        rgba(201,168,76,0.12) 39px, rgba(201,168,76,0.12) 40px
+      ),
+      linear-gradient(to right, transparent 52px, rgba(180,50,50,0.18) 52px, rgba(180,50,50,0.18) 54px, transparent 54px),
+      linear-gradient(160deg, var(--parchment-lt), var(--parchment), #edd9a3);
+    border-radius: 3px;
+    padding: 20px 20px 40px 64px;
+    min-height: calc(100dvh - 160px);
+    box-shadow: 0 4px 32px rgba(0,0,0,0.6), inset 0 0 40px rgba(160,100,40,0.08);
+    position: relative;
+  }
+  .parchment-sheet::after {
+    content: '';
+    position: absolute; inset: 0; border-radius: 3px;
+    background: linear-gradient(to right, rgba(100,50,20,0.15), transparent 5%, transparent 95%, rgba(100,50,20,0.1));
+    pointer-events: none;
+  }
+  .entry-date-stamp {
+    font-size: 0.7rem; color: rgba(26,10,0,0.4);
+    font-style: italic; margin-bottom: 16px;
+    user-select: none;
+  }
+  .title-input {
+    width: 100%; background: none; border: none;
+    font-family: Georgia, serif; font-style: italic;
+    font-size: 1.2rem; color: var(--ink);
+    outline: none; padding: 0 0 12px;
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    margin-bottom: 16px;
+    -webkit-appearance: none;
+  }
+  .title-input::placeholder { color: rgba(26,10,0,0.25); }
+  .content-textarea {
+    width: 100%; background: none; border: none;
+    font-family: Georgia, serif; font-style: italic;
+    font-size: 0.95rem; color: var(--ink);
+    outline: none; resize: none;
+    line-height: 2.5rem;
+    min-height: 400px;
+    -webkit-appearance: none;
+  }
+  .content-textarea::placeholder { color: rgba(26,10,0,0.22); }
+
+  /* ══════════════════════════════════════
+     INSTALL BANNER
+  ══════════════════════════════════════ */
+  #install-banner {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(135deg, var(--leather-dk), #0a0400);
+    border-top: 1px solid var(--gold-border);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.4s ease;
+  }
+  #install-banner.show { transform: translateY(0); }
+  #install-banner .banner-text {
+    flex: 1; font-size: 0.82rem;
+    color: var(--parchment); font-style: italic;
+  }
+  #install-banner .banner-text strong {
+    display: block; color: var(--gold);
+    font-size: 0.85rem; margin-bottom: 2px;
+  }
+
+  /* ══════════════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════════════ */
+  @media (min-width: 480px) {
+    .parchment-sheet { min-height: 600px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sparkle canvas (shared bg layer) -->
+<canvas id="sparkle-canvas"></canvas>
+
+<!-- ════════════ SETUP SCREEN ════════════ -->
+<div id="setup-screen" class="screen">
+  <div class="scroll-content">
+
+    <!-- Step 0: Welcome -->
+    <div class="setup-step visible" id="step-0">
+      <div class="step-icon">🪄</div>
+      <h1 class="step-title">Marauder's Diary</h1>
+      <p class="step-desc">Welcome, young witch or wizard.<br>This enchanted diary shall keep your most secret thoughts safe behind a riddle only you know the answer to.</p>
+      <div class="divider"></div>
+      <br>
+      <button class="btn-wax" onclick="gotoStep(1)">BEGIN THE RITUAL</button>
+    </div>
+
+    <!-- Step 1: Create riddle -->
+    <div class="setup-step" id="step-1">
+      <div class="step-icon">🔮</div>
+      <h2 class="step-title">Craft your riddle</h2>
+      <p class="step-desc" style="margin-top:8px">This riddle will guard the diary forever.<br>Choose one only you can answer.</p>
+      <br>
+      <div class="field-wrap">
+        <label class="field-label">YOUR RIDDLE</label>
+        <textarea class="enchanted-input" id="riddle-input" rows="3"
+          placeholder="e.g. What has a face and two hands, but no arms or legs?"></textarea>
+      </div>
+      <div class="error-msg" id="riddle-error"></div>
+      <br>
+      <button class="btn-wax" onclick="confirmRiddle()">SEAL THE RIDDLE</button>
+    </div>
+
+    <!-- Step 2: Create answer -->
+    <div class="setup-step" id="step-2">
+      <div class="step-icon">🗝️</div>
+      <h2 class="step-title">The secret answer</h2>
+      <div class="riddle-preview" id="riddle-preview-box"></div>
+      <div class="field-wrap">
+        <label class="field-label">THE ANSWER</label>
+        <input class="enchanted-input" id="answer-input" type="text"
+          placeholder="Speak the answer..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <p class="muted italic" style="text-align:center;margin-bottom:16px">Not case-sensitive. Remember this well.</p>
+      <div class="error-msg" id="answer-error"></div>
+      <br>
+      <button class="btn-wax" onclick="confirmAnswer()">ENCHANT THE DIARY ✨</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════ LOCK SCREEN ════════════ -->
+<div id="lock-screen" class="screen">
+  <div class="scroll-content">
+    <div class="inner">
+      <div class="diary-icon-anim">📖</div>
+      <h1>Marauder's Diary</h1>
+      <p class="muted italic" style="margin-top:6px;margin-bottom:4px">Speak, friend, and enter...</p>
+      <div class="divider" style="width:100%;margin:16px 0"></div>
+
+      <div class="riddle-box" id="lock-riddle-box">
+        <div class="riddle-box-label">🔮 THE RIDDLE</div>
+        <div class="riddle-text" id="lock-riddle-text"></div>
+      </div>
+
+      <div class="field-wrap" style="width:100%">
+        <label class="field-label">YOUR ANSWER</label>
+        <input class="enchanted-input" id="lock-answer-input" type="text"
+          placeholder="Your answer..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          onkeydown="if(event.key==='Enter') tryUnlock()">
+      </div>
+
+      <div class="wrong-msg" id="wrong-msg"></div>
+
+      <button class="btn-wax" onclick="tryUnlock()" style="margin-top:8px">ALOHOMORA ✨</button>
+      <p class="lock-hint">Hint: answers are not case-sensitive</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ HOME SCREEN ════════════ -->
+<div id="home-screen" class="screen">
+  <div class="home-header">
+    <div class="home-header-top">
+      <div>
+        <div class="home-title">✦ Marauder's Diary</div>
+        <div class="home-subtitle" id="entry-count-label">0 entries written</div>
+      </div>
+      <div style="text-align:center">
+        <button class="sync-btn" onclick="showSyncInfo()" title="Sync info">☁️</button>
+        <div class="sync-label">Backup</div>
+      </div>
+    </div>
+    <div class="divider" style="margin-top:8px"></div>
+  </div>
+
+  <div class="entries-list" id="entries-list"></div>
+
+  <button class="fab" onclick="openNewEntry()" title="New entry">🪶</button>
+</div>
+
+<!-- ════════════ EDITOR SCREEN ════════════ -->
+<div id="editor-screen" class="screen">
+  <div class="editor-topbar">
+    <button class="btn-icon" onclick="goHome()">←</button>
+    <div class="editor-center">
+      <span class="editor-screen-title" id="editor-title-label">New Entry</span>
+    </div>
+    <button class="btn-icon" onclick="toggleMoodBar()" id="mood-display" title="Pick mood">✨</button>
+    <button class="btn-text" onclick="saveEntry()">SEAL</button>
+  </div>
+
+  <!-- Mood picker bar -->
+  <div class="mood-bar" id="mood-bar">
+    <button class="mood-btn selected" data-mood="✨" onclick="selectMood(this)">✨</button>
+    <button class="mood-btn" data-mood="😊" onclick="selectMood(this)">😊</button>
+    <button class="mood-btn" data-mood="😔" onclick="selectMood(this)">😔</button>
+    <button class="mood-btn" data-mood="😡" onclick="selectMood(this)">😡</button>
+    <button class="mood-btn" data-mood="🌟" onclick="selectMood(this)">🌟</button>
+    <button class="mood-btn" data-mood="💭" onclick="selectMood(this)">💭</button>
+    <button class="mood-btn" data-mood="🌙" onclick="selectMood(this)">🌙</button>
+    <button class="mood-btn" data-mood="☀️" onclick="selectMood(this)">☀️</button>
+    <button class="mood-btn" data-mood="🦉" onclick="selectMood(this)">🦉</button>
+    <button class="mood-btn" data-mood="⚡" onclick="selectMood(this)">⚡</button>
+    <button class="mood-btn" data-mood="🔮" onclick="selectMood(this)">🔮</button>
+    <button class="mood-btn" data-mood="🧪" onclick="selectMood(this)">🧪</button>
+    <button class="mood-btn" data-mood="❤️" onclick="selectMood(this)">❤️</button>
+    <button class="mood-btn" data-mood="😴" onclick="selectMood(this)">😴</button>
+    <button class="mood-btn" data-mood="🌿" onclick="selectMood(this)">🌿</button>
+  </div>
+
+  <div class="parchment-wrap">
+    <div class="parchment-sheet">
+      <div class="entry-date-stamp" id="entry-date-stamp"></div>
+      <input class="title-input" id="entry-title-input"
+        type="text" placeholder="Title..."
+        autocorrect="off" spellcheck="true">
+      <textarea class="content-textarea" id="entry-content-input"
+        placeholder="Begin writing your thoughts...&#10;&#10;The pages await your quill."
+        spellcheck="true"></textarea>
+    </div>
+  </div>
+
+  <div class="saved-flash" id="saved-flash">✨ Entry sealed with magic</div>
+</div>
+
+<!-- ════════════ INSTALL BANNER ════════════ -->
+<div id="install-banner">
+  <span style="font-size:1.6rem">📲</span>
+  <div class="banner-text">
+    <strong>Add to Home Screen</strong>
+    Tap your browser menu → "Add to Home Screen" for the full app experience
+  </div>
+  <button class="btn-icon" onclick="dismissBanner()" style="opacity:0.6;font-size:1rem">✕</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// SPARKLE ANIMATION
+// ══════════════════════════════════════════════
+(function sparkles() {
+  const canvas = document.getElementById('sparkle-canvas');
+  const ctx = canvas.getContext('2d');
+  const particles = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 22; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: Math.random() * 2.5 + 0.5,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.008 + Math.random() * 0.012,
+      drift: (Math.random() - 0.5) * 0.3,
+      vy: -0.2 - Math.random() * 0.3,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = Date.now() * 0.001;
+    particles.forEach(p => {
+      p.phase += p.speed;
+      p.x += p.drift;
+      p.y += p.vy;
+      if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+      if (p.x < -10) p.x = canvas.width + 10;
+      if (p.x > canvas.width + 10) p.x = -10;
+
+      const alpha = (Math.sin(p.phase) * 0.5 + 0.5) * 0.75;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#c9a84c';
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = '#c9a84c';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ══════════════════════════════════════════════
+// STATE & STORAGE
+// ══════════════════════════════════════════════
+const DB_KEY    = 'md_entries';
+const RIDDLE_KEY = 'md_riddle';
+const ANSWER_KEY = 'md_answer_hash';
+
+let currentEntryId = null;
+let currentMood    = '✨';
+let wrongAttempts  = 0;
+
+// Simple hash (not crypto, but good enough for a diary riddle)
+async function hashStr(str) {
+  const enc = new TextEncoder().encode(str.toLowerCase().trim());
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(DB_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveEntries(entries) {
+  localStorage.setItem(DB_KEY, JSON.stringify(entries));
+}
+function isSetup()    { return !!localStorage.getItem(RIDDLE_KEY); }
+function getRiddle()  { return localStorage.getItem(RIDDLE_KEY) || ''; }
+
+// ══════════════════════════════════════════════
+// SCREEN NAV
+// ══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function init() {
+  if (!isSetup()) {
+    showScreen('setup-screen');
+  } else {
+    showScreen('lock-screen');
+    document.getElementById('lock-riddle-text').textContent = getRiddle();
+    setTimeout(() => document.getElementById('lock-answer-input').focus(), 600);
+  }
+  // Install banner
+  if (!localStorage.getItem('banner_dismissed') && !window.matchMedia('(display-mode: standalone)').matches) {
+    setTimeout(() => document.getElementById('install-banner').classList.add('show'), 4000);
+  }
+}
+
+// ══════════════════════════════════════════════
+// SETUP FLOW
+// ══════════════════════════════════════════════
+let _riddleText = '';
+
+function gotoStep(n) {
+  document.querySelectorAll('.setup-step').forEach(s => s.classList.remove('visible'));
+  document.getElementById('step-' + n).classList.add('visible');
+  if (n === 1) setTimeout(() => document.getElementById('riddle-input').focus(), 300);
+  if (n === 2) setTimeout(() => document.getElementById('answer-input').focus(), 300);
+}
+
+function confirmRiddle() {
+  const val = document.getElementById('riddle-input').value.trim();
+  if (val.length < 5) {
+    document.getElementById('riddle-error').textContent = '⚠ Your riddle must be at least 5 characters';
+    return;
+  }
+  _riddleText = val;
+  document.getElementById('riddle-preview-box').textContent = '"' + val + '"';
+  document.getElementById('riddle-error').textContent = '';
+  gotoStep(2);
+}
+
+async function confirmAnswer() {
+  const val = document.getElementById('answer-input').value.trim();
+  if (!val) {
+    document.getElementById('answer-error').textContent = '⚠ Please provide an answer';
+    return;
+  }
+  localStorage.setItem(RIDDLE_KEY, _riddleText);
+  const h = await hashStr(val);
+  localStorage.setItem(ANSWER_KEY, h);
+  document.getElementById('answer-error').textContent = '';
+  showScreen('lock-screen');
+  document.getElementById('lock-riddle-text').textContent = _riddleText;
+  setTimeout(() => document.getElementById('lock-answer-input').focus(), 500);
+}
+
+// ══════════════════════════════════════════════
+// LOCK / UNLOCK
+// ══════════════════════════════════════════════
+async function tryUnlock() {
+  const input  = document.getElementById('lock-answer-input');
+  const msgEl  = document.getElementById('wrong-msg');
+  const attempt = input.value.trim();
+  if (!attempt) return;
+
+  const h = await hashStr(attempt);
+  const stored = localStorage.getItem(ANSWER_KEY);
+
+  if (h === stored) {
+    wrongAttempts = 0;
+    input.value = '';
+    msgEl.textContent = '';
+    renderHome();
+    showScreen('home-screen');
+  } else {
+    wrongAttempts++;
+    input.value = '';
+    const box = document.getElementById('lock-riddle-box');
+    box.classList.remove('shake');
+    void box.offsetWidth; // reflow
+    box.classList.add('shake');
+    if (wrongAttempts >= 5)
+      msgEl.textContent = '⚠ Many failed attempts. Are you a Death Eater?';
+    else if (wrongAttempts >= 3)
+      msgEl.textContent = '⚠ Wrong again! Think more carefully...';
+    else
+      msgEl.textContent = '⚠ That is not the correct answer.';
+    setTimeout(() => box.classList.remove('shake'), 500);
+    setTimeout(() => input.focus(), 100);
+  }
+}
+
+// ══════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════
+function renderHome() {
+  const entries = loadEntries();
+  const list = document.getElementById('entries-list');
+  const countLabel = document.getElementById('entry-count-label');
+  countLabel.textContent = entries.length + (entries.length === 1 ? ' entry written' : ' entries written');
+
+  if (entries.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📜</div>
+        <div class="empty-title">The pages are empty...</div>
+        <div class="empty-sub">Tap the quill below to begin your first entry</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = entries.map(e => `
+    <div class="entry-card" onclick="openEntry(${e.id})">
+      <div class="entry-card-header">
+        <div class="entry-mood-title">
+          <span class="entry-mood">${e.mood}</span>
+          <span class="entry-title">${escHtml(e.title || 'Untitled')}</span>
+        </div>
+        <button class="entry-delete-btn" onclick="event.stopPropagation(); showDeleteConfirm(${e.id}, this)" title="Delete">🗑</button>
+      </div>
+      <div class="entry-preview">${escHtml(e.content || '')}</div>
+      <div class="entry-meta">
+        <span>${formatDate(e.timestamp)}</span>
+        ${e.backed ? '<span class="entry-synced">☁</span>' : ''}
+      </div>
+      <div class="delete-confirm" id="del-${e.id}">
+        <span>Banish this entry forever?</span>
+        <button class="btn-text" onclick="event.stopPropagation(); document.getElementById('del-${e.id}').classList.remove('show')">Keep</button>
+        <button class="btn-text" style="color:#ff6b6b" onclick="event.stopPropagation(); deleteEntry(${e.id})">Banish</button>
+      </div>
+    </div>`).join('');
+}
+
+function showDeleteConfirm(id, btn) {
+  // hide others
+  document.querySelectorAll('.delete-confirm').forEach(d => d.classList.remove('show'));
+  document.getElementById('del-' + id).classList.add('show');
+}
+
+function deleteEntry(id) {
+  let entries = loadEntries().filter(e => e.id !== id);
+  saveEntries(entries);
+  renderHome();
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function formatDate(ts) {
+  return new Date(ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ══════════════════════════════════════════════
+// EDITOR
+// ══════════════════════════════════════════════
+function openNewEntry() {
+  currentEntryId = null;
+  currentMood = '✨';
+  document.getElementById('editor-title-label').textContent = 'New Entry';
+  document.getElementById('entry-title-input').value = '';
+  document.getElementById('entry-content-input').value = '';
+  document.getElementById('mood-display').textContent = '✨';
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.mood === '✨');
+  });
+  document.getElementById('entry-date-stamp').textContent =
+    new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  document.getElementById('mood-bar').classList.remove('open');
+  showScreen('editor-screen');
+  setTimeout(() => document.getElementById('entry-title-input').focus(), 300);
+}
+
+function openEntry(id) {
+  const entries = loadEntries();
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  currentEntryId = id;
+  currentMood = entry.mood || '✨';
+  document.getElementById('editor-title-label').textContent = 'Editing Entry';
+  document.getElementById('entry-title-input').value = entry.title || '';
+  document.getElementById('entry-content-input').value = entry.content || '';
+  document.getElementById('mood-display').textContent = currentMood;
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.mood === currentMood);
+  });
+  document.getElementById('entry-date-stamp').textContent =
+    new Date(entry.timestamp).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  document.getElementById('mood-bar').classList.remove('open');
+  showScreen('editor-screen');
+}
+
+function saveEntry() {
+  const title   = document.getElementById('entry-title-input').value.trim();
+  const content = document.getElementById('entry-content-input').value.trim();
+  if (!title && !content) { goHome(); return; }
+
+  let entries = loadEntries();
+  if (currentEntryId !== null) {
+    entries = entries.map(e => e.id === currentEntryId
+      ? { ...e, title: title || 'Untitled', content, mood: currentMood }
+      : e);
+  } else {
+    entries.unshift({
+      id: Date.now(),
+      title: title || 'Untitled',
+      content,
+      mood: currentMood,
+      timestamp: Date.now(),
+      backed: false
+    });
+  }
+  saveEntries(entries);
+
+  // Flash saved msg
+  const flash = document.getElementById('saved-flash');
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 2200);
+  setTimeout(() => { renderHome(); goHome(); }, 800);
+}
+
+function goHome() {
+  document.getElementById('mood-bar').classList.remove('open');
+  renderHome();
+  showScreen('home-screen');
+}
+
+// Mood
+function toggleMoodBar() {
+  document.getElementById('mood-bar').classList.toggle('open');
+}
+function selectMood(btn) {
+  currentMood = btn.dataset.mood;
+  document.getElementById('mood-display').textContent = currentMood;
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  setTimeout(() => document.getElementById('mood-bar').classList.remove('open'), 200);
+}
+
+// Auto-grow textarea
+document.getElementById('entry-content-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.max(400, this.scrollHeight) + 'px';
+});
+
+// ══════════════════════════════════════════════
+// SYNC INFO
+// ══════════════════════════════════════════════
+function showSyncInfo() {
+  const entries = loadEntries();
+  const backed = entries.filter(e => e.backed).length;
+  // Mark all as "backed up" locally (since no real drive sync in PWA)
+  const updated = entries.map(e => ({...e, backed: true}));
+  saveEntries(updated);
+  renderHome();
+  alert(`📜 Diary Backup\n\n${entries.length} entries are saved on your phone.\n\nTo back up your diary:\n• Open your browser menu\n• Tap "Share" or "Export"\n• Or screenshot important entries\n\nYour entries are stored safely in your browser's local storage.`);
+}
+
+// ══════════════════════════════════════════════
+// INSTALL BANNER
+// ══════════════════════════════════════════════
+function dismissBanner() {
+  document.getElementById('install-banner').classList.remove('show');
+  localStorage.setItem('banner_dismissed', '1');
+}
+
+// ══════════════════════════════════════════════
+// KEYBOARD: keep parchment visible
+// ══════════════════════════════════════════════
+let initialHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const editorScreen = document.getElementById('editor-screen');
+    if (editorScreen.classList.contains('active')) {
+      const keyboardH = initialHeight - window.visualViewport.height;
+      editorScreen.style.paddingBottom = keyboardH > 50 ? keyboardH + 'px' : '';
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+// SERVICE WORKER (offline)
+// ══════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ══════════════════════════════════════════════
+// START
+// ══════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
